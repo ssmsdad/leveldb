@@ -45,13 +45,17 @@ int VarintLength(uint64_t v);
 // Lower-level versions of Put... that write directly into a character buffer
 // and return a pointer just past the last byte written.
 // REQUIRES: dst has enough space for the value being written
+// 编码一个不确定大小的数用EncodeVarint32和EncodeVarint64
+// 编码一个确定大小的数用EncodeFixed32和EncodeFixed64
 char* EncodeVarint32(char* dst, uint32_t value);
 char* EncodeVarint64(char* dst, uint64_t value);
 
 // Lower-level versions of Put... that write directly into a character buffer
 // REQUIRES: dst has enough space for the value being written
 
+// 通过将32位整数分解为4个字节并按顺序存储，确保了无论在什么平台上，这个整数都能被正确地编码和解码
 inline void EncodeFixed32(char* dst, uint32_t value) {
+  // 每个字节含有8位，所以我们需要将32位整数分为4个8位的字节，然后分别存储到4个字节中。
   uint8_t* const buffer = reinterpret_cast<uint8_t*>(dst);
 
   // Recent clang and gcc optimize this to a single mov / str instruction.
@@ -78,10 +82,12 @@ inline void EncodeFixed64(char* dst, uint64_t value) {
 // Lower-level versions of Get... that read directly from a character buffer
 // without any bounds checking.
 
+// 通过将4个字节的数据合并为一个32位整数，确保了无论在什么平台上，这个整数都能被正确地编码和解码
 inline uint32_t DecodeFixed32(const char* ptr) {
   const uint8_t* const buffer = reinterpret_cast<const uint8_t*>(ptr);
 
   // Recent clang and gcc optimize this to a single mov / ldr instruction.
+  // “ | ”是按位或运算符
   return (static_cast<uint32_t>(buffer[0])) |
          (static_cast<uint32_t>(buffer[1]) << 8) |
          (static_cast<uint32_t>(buffer[2]) << 16) |

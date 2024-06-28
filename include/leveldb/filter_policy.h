@@ -24,6 +24,7 @@ namespace leveldb {
 
 class Slice;
 
+// FilterPolicy类可以通过减少不必要的磁盘访问来加速键的查找过程
 class LEVELDB_EXPORT FilterPolicy {
  public:
   virtual ~FilterPolicy();

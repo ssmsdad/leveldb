@@ -18,13 +18,16 @@ void PutFixed64(std::string* dst, uint64_t value) {
   dst->append(buf, sizeof(buf));
 }
 
+// 核心：允许较小的数值占用更少的空间。基本原理是使用整数的最高位（通常是第8位）作为一个标志位，来指示是否还有更多的字节是该整数的一部分
 char* EncodeVarint32(char* dst, uint32_t v) {
   // Operate on characters as unsigneds
   uint8_t* ptr = reinterpret_cast<uint8_t*>(dst);
   static const int B = 128;
   if (v < (1 << 7)) {
+    // 先将v的值存储到ptr指向的内存中，然后将ptr指向下一个内存地址
     *(ptr++) = v;
   } else if (v < (1 << 14)) {
+    // 将倒数第八位设置为1，表示后面还有一个字节
     *(ptr++) = v | B;
     *(ptr++) = v >> 7;
   } else if (v < (1 << 21)) {

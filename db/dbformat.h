@@ -66,6 +66,7 @@ typedef uint64_t SequenceNumber;
 // can be packed together into 64-bits.
 static const SequenceNumber kMaxSequenceNumber = ((0x1ull << 56) - 1);
 
+// InternalKey is a user key, a sequence number, and a type.
 struct ParsedInternalKey {
   Slice user_key;
   SequenceNumber sequence;
@@ -79,6 +80,7 @@ struct ParsedInternalKey {
 
 // Return the length of the encoding of "key".
 inline size_t InternalKeyEncodingLength(const ParsedInternalKey& key) {
+  // sequence（7byte） + type（1byte） 是 64 位，所以加 8
   return key.user_key.size() + 8;
 }
 
@@ -99,6 +101,7 @@ inline Slice ExtractUserKey(const Slice& internal_key) {
 
 // A comparator for internal keys that uses a specified comparator for
 // the user key portion and breaks ties by decreasing sequence number.
+// 按照 user_key 、 sequence的顺序比较
 class InternalKeyComparator : public Comparator {
  private:
   const Comparator* user_comparator_;
@@ -131,6 +134,7 @@ class InternalFilterPolicy : public FilterPolicy {
 // Modules in this directory should keep internal keys wrapped inside
 // the following class instead of plain strings so that we do not
 // incorrectly use string comparisons instead of an InternalKeyComparator.
+// | User key (string) | sequence number (7 bytes) | value type (1 byte) |
 class InternalKey {
  private:
   std::string rep_;
@@ -142,12 +146,14 @@ class InternalKey {
   }
 
   bool DecodeFrom(const Slice& s) {
+    // assign() 方法用于将s的内容赋值给rep_
     rep_.assign(s.data(), s.size());
     return !rep_.empty();
   }
 
   Slice Encode() const {
     assert(!rep_.empty());
+    // 隐式调用Slice(const std::string& s)构造函数
     return rep_;
   }
 
@@ -168,12 +174,16 @@ inline int InternalKeyComparator::Compare(const InternalKey& a,
   return Compare(a.Encode(), b.Encode());
 }
 
+// 将一个Slice对象（由InternalKey对象转化来的）转换为ParsedInternalKey对象
 inline bool ParseInternalKey(const Slice& internal_key,
                              ParsedInternalKey* result) {
   const size_t n = internal_key.size();
   if (n < 8) return false;
+  // 指向char数组的倒数第8个字节，在这里存有sequence和value_type
   uint64_t num = DecodeFixed64(internal_key.data() + n - 8);
+  // 从低到高取出8位，即value_type
   uint8_t c = num & 0xff;
+  // 从高到低取出56位，即sequence，低8位是value_type
   result->sequence = num >> 8;
   result->type = static_cast<ValueType>(c);
   result->user_key = Slice(internal_key.data(), n - 8);
@@ -181,6 +191,7 @@ inline bool ParseInternalKey(const Slice& internal_key,
 }
 
 // A helper class useful for DBImpl::Get()
+// | Size (int32变长)| User key (string) | sequence number (7 bytes) | value type (1 byte) |
 class LookupKey {
  public:
   // Initialize *this for looking up user_key at a snapshot with

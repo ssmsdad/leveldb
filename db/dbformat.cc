@@ -18,6 +18,7 @@ static uint64_t PackSequenceAndType(uint64_t seq, ValueType t) {
   return (seq << 8) | t;
 }
 
+// 将user_key+seqence_number+value_type添加到result中
 void AppendInternalKey(std::string* result, const ParsedInternalKey& key) {
   result->append(key.user_key.data(), key.user_key.size());
   PutFixed64(result, PackSequenceAndType(key.sequence, key.type));
@@ -121,15 +122,19 @@ LookupKey::LookupKey(const Slice& user_key, SequenceNumber s) {
   if (needed <= sizeof(space_)) {
     dst = space_;
   } else {
+    // 不够的话动态分配内存，并且记得在析构函数中释放
     dst = new char[needed];
   }
+  // start_指向dst的起始位置，即长度
   start_ = dst;
   dst = EncodeVarint32(dst, usize + 8);
+  // kstart_指向真正的数据位置，即user_key
   kstart_ = dst;
   std::memcpy(dst, user_key.data(), usize);
   dst += usize;
   EncodeFixed64(dst, PackSequenceAndType(s, kValueTypeForSeek));
   dst += 8;
+  // end_指向dst的结束位置
   end_ = dst;
 }
 

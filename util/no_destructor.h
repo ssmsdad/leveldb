@@ -23,7 +23,9 @@ class NoDestructor {
     static_assert(
         alignof(decltype(instance_storage_)) >= alignof(InstanceType),
         "instance_storage_ does not meet the instance's alignment requirement");
+    // 使用了定位new操作符在instance_storage_指定的地址上直接构造一个InstanceType的实例。 
     new (&instance_storage_)
+        // 使用完美转发的方式将constructor_args传递给InstanceType的构造函数
         InstanceType(std::forward<ConstructorArgTypes>(constructor_args)...);
   }
 
@@ -37,6 +39,7 @@ class NoDestructor {
   }
 
  private:
+//  instance_storage_是一个一个未初始化的内存块，它的大小是InstanceType的大小，对齐方式是InstanceType的对齐方式
   typename std::aligned_storage<sizeof(InstanceType),
                                 alignof(InstanceType)>::type instance_storage_;
 };

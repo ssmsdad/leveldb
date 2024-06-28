@@ -33,6 +33,7 @@ class LEVELDB_EXPORT Slice {
   Slice(const char* d, size_t n) : data_(d), size_(n) {}
 
   // Create a slice that refers to the contents of "s"
+  // s.data()会返回一个字符数组的指针，这个指针指向的是字符串的第一个字符
   Slice(const std::string& s) : data_(s.data()), size_(s.size()) {}
 
   // Create a slice that refers to s[0,strlen(s)-1]
